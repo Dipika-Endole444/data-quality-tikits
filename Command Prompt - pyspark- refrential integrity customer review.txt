@@ -1,0 +1,79 @@
+Microsoft Windows [Version 10.0.26100.3624]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\parsh>pyspark
+Python 3.10.5 (tags/v3.10.5:f377153, Jun  6 2022, 16:14:13) [MSC v.1929 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+25/04/15 20:08:28 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Welcome to
+      ____              __
+     / __/__  ___ _____/ /__
+    _\ \/ _ \/ _ `/ __/  '_/
+   /__ / .__/\_,_/_/ /_/\_\   version 3.5.1
+      /_/
+
+Using Python version 3.10.5 (tags/v3.10.5:f377153, Jun  6 2022 16:14:13)
+Spark context Web UI available at http://LAPTOP-5705N2GF:4040
+Spark context available as 'sc' (master = local[*], app id = local-1744727910354).
+SparkSession available as 'spark'.
+>>>
+>>> from pyspark.sql import SparkSession
+>>>
+>>> spark = SparkSession.builder.appName("RefIntegrityCheck").getOrCreate()
+25/04/15 20:12:14 WARN SparkSession: Using an existing Spark session; only runtime SQL configurations will take effect.
+>>>
+>>> reviews = spark.read.option("multiline","true").json(r"C:\Users\parsh\PycharmProjects\ecom-medallion\data\dq_rules_sample_datasets\04_referential_integrity\r3_reviews_file_customer_id_and_product_id_in_Customer_Reviews_should_have_corresponding_entries_in_Customers_and_Products_Tables")
+[Stage 0:>[Stage 0:=======================================================>>> products = spark.read.option("multiline","true").json(r"C:\Users\parsh\PycharmProjects\ecom-medallion\data\dq_rules_sample_datasets\04_referential_integrity\r3_products_file_customer_id_and_product_id_in_Customer_Reviews_should_have_corresponding_entries_in_Customers_and_Products_Tables")
+>>>
+>>>
+>>> customers = spark.read.option("multiline","true").json(r"C:\Users\parsh\PycharmProjects\ecom-medallion\data\dq_rules_sample_datasets\04_referential_integrity\r3_customer_file_customer_id_and_product_id_in_Customer_Reviews_should_have_corresponding_entries_in_Customers_and_Products_Tables")
+>>>
+>>>
+>>> #  Find Invalid Reviews (Missing customer_id or product_id)
+>>>
+>>> invalid_customers = reviews.join(customers, on="customer_id", how="left_anti")
+>>>
+>>> invalid_products = reviews.join(products, on="product_id", how="left_anti")
+>>>
+>>>
+>>> #Filter Valid Reviews (customer_id AND product_id must exist)
+>>>
+>>> valid_reviews = reviews.join(customers, on="customer_id", how="inner").join(products, on="product_id", how="inner")
+>>>
+>>>
+>>> # Show results
+>>>
+>>> invalid_customers.show()
++-----------+----------+------+-------------------+---------+--------------------+
+|customer_id|product_id|rating|        review_date|review_id|      review_text|
++-----------+----------+------+-------------------+---------+--------------------+
+|   CUST9999|  PROD1003|     3|2024-06-03T09:15:00|  REV1003| Decent performance.|
+|   CUST0000|  PROD0000|     1|2024-06-08T10:00:00|  REV1008|Worst purchase ever.|
++-----------+----------+------+-------------------+---------+--------------------+
+
+>>>
+>>> invalid_products.show()
++----------+-----------+------+-------------------+---------+--------------------+
+|product_id|customer_id|rating|        review_date|review_id|      review_text|
++----------+-----------+------+-------------------+---------+--------------------+
+|  PROD8888|   CUST1003|     2|2024-06-04T11:00:00|  REV1004|Stopped working a...|
+|  PROD0000|   CUST0000|     1|2024-06-08T10:00:00|  REV1008|Worst purchase ever.|
++----------+-----------+------+-------------------+---------+--------------------+
+
+>>>
+>>>
+>>> valid_reviews.show()
++----------+-----------+------+-------------------+---------+--------------------+-------+------------------+----------+---------+------------+-----------+-------+--------------+--------------+
+|product_id|customer_id|rating|        review_date|review_id|      review_text|address|             email|first_name|last_name|phone_number|   category|  price|  product_name|stock_quantity|
++----------+-----------+------+-------------------+---------+--------------------+-------+------------------+----------+---------+------------+-----------+-------+--------------+--------------+
+|  PROD1001|   CUST1001|     5|2024-06-01T10:00:00|  REV1001|Excellent tablet!| Indore|  rina@example.com|      Rina|    Mehra|  9876543210|Electronics|15999.0|        Tablet|           100|
+|  PROD1002|   CUST1002|     4|2024-06-02T14:30:00|  REV1002|      Works well.|   Pune|  aman@example.com|      Aman|    Gupta|  9123456789| Networking| 2999.0|        Router|            50|
+|  PROD1003|   CUST1003|     5|2024-06-05T16:00:00|  REV1005|Great value for m...|  Delhi|simran@example.com|    Simran|     Kaur|  9900112233|Accessories| 4999.0|Drawing Tablet|            30|
+|  PROD1001|   CUST1002|     4|2024-06-06T18:20:00|  REV1006|Very handy and po...|   Pune|  aman@example.com|      Aman|    Gupta|  9123456789|Electronics|15999.0|        Tablet|           100|
+|  PROD1003|   CUST1001|     5|2024-06-07T12:40:00|  REV1007| Highly recommended.| Indore|  rina@example.com|      Rina|    Mehra|  9876543210|Accessories| 4999.0|Drawing Tablet|            30|
++----------+-----------+------+-------------------+---------+--------------------+-------+------------------+----------+---------+------------+-----------+-------+--------------+--------------+
+
+
+   
