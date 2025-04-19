@@ -1,0 +1,75 @@
+Microsoft Windows [Version 10.0.26100.3624]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\parsh>pyspark
+Python 3.10.5 (tags/v3.10.5:f377153, Jun  6 2022, 16:14:13) [MSC v.1929 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+25/04/17 15:30:45 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Welcome to
+      ____              __
+     / __/__  ___ _____/ /__
+    _\ \/ _ \/ _ `/ __/  '_/
+   /__ / .__/\_,_/_/ /_/\_\   version 3.5.1
+      /_/
+
+Using Python version 3.10.5 (tags/v3.10.5:f377153, Jun  6 2022 16:14:13)
+Spark context Web UI available at http://LAPTOP-5705N2GF:4040
+Spark context available as 'sc' (master = local[*], app id = local-1744884048300).
+SparkSession available as 'spark'.
+>>>
+>>> from pyspark.sql import SparkSession
+>>> from pyspark.sql.functions import col, to_timestamp
+>>> from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+>>>
+>>>
+>>> # Start Spark session
+>>> spark = SparkSession.builder.appName("CustomerReviewValidation").getOrCreate()
+25/04/17 15:31:35 WARN SparkSession: Using an existing Spark session; only runtime SQL configurations will take effect.
+>>>
+>>>
+>>> # Load json file
+>>>
+>>> df = spark.read.option("multiline", True).json(r"C:\Users\parsh\PycharmProjects\ecom-medallion\data\dq_rules_sample_datasets\02_data_type_validation\r3_rating_in_Customer_Reviews_must_be_an_integer_between_1_and_5")
+>>>
+>>>
+>>> # show loaded data
+>>>
+>>> df.show()
++-----------+----------+------+-------------------+---------+--------------------+
+|customer_id|product_id|rating|        review_date|review_id|         review_text|
++-----------+----------+------+-------------------+---------+--------------------+
+|    CUST301|   PROD301|     5|2024-01-01T10:00:00|   REV301|Outstanding quality!|
+|    CUST302|   PROD302|     3|2024-01-02T12:30:00|   REV302|Satisfactory prod...|
+|    CUST303|   PROD303|     1|2024-01-03T09:15:00|   REV303|Not worth the price.|
+|    CUST304|   PROD304|     6|2024-01-04T14:45:00|   REV304|Exceeded expectat...|
+|    CUST305|   PROD305|     0|2024-01-05T10:00:00|   REV305|Very bad experience.|
+|    CUST306|   PROD306|    -2|2024-01-06T11:00:00|   REV306|  Broken on arrival.|
+|    CUST307|   PROD307|  NULL|2024-01-07T13:10:00|   REV307|    No rating given.|
+|    CUST308|   PROD308|  four|2024-01-08T08:20:00|   REV308|       Nice product.|
++-----------+----------+------+-------------------+---------+--------------------+
+
+>>>
+>>> # Cast rating to integer and convert review_date to timestamp
+>>>
+>>> df_validated = df.withColumn("rating_int", col("rating").cast(IntegerType())).withColumn("review_timestamp", to_timestamp(col("review_date")))
+>>>
+>>>
+>>> # Filter: rating between 1 and 5, and review_date is a valid timestamp
+>>>
+>>> df_clean = df_validated.filter((col("rating_int").between(1, 5)) & (col("review_timestamp").isNotNull()))
+>>>
+>>>
+>>> # Show valid data
+>>>
+>>> df_clean.show(truncate=False)
++-----------+----------+------+-------------------+---------+---------------------+----------+-------------------+
+|customer_id|product_id|rating|review_date        |review_id|review_text          |rating_int|review_timestamp   |
++-----------+----------+------+-------------------+---------+---------------------+----------+-------------------+
+|CUST301    |PROD301   |5     |2024-01-01T10:00:00|REV301   |Outstanding quality! |5         |2024-01-01 10:00:00|
+|CUST302    |PROD302   |3     |2024-01-02T12:30:00|REV302   |Satisfactory product.|3         |2024-01-02 12:30:00|
+|CUST303    |PROD303   |1     |2024-01-03T09:15:00|REV303   |Not worth the price. |1         |2024-01-03 09:15:00|
++-----------+----------+------+-------------------+---------+---------------------+----------+-------------------+
+
+>>>
