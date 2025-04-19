@@ -1,0 +1,79 @@
+Microsoft Windows [Version 10.0.26100.3624]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\parsh>pyspark
+Python 3.10.5 (tags/v3.10.5:f377153, Jun  6 2022, 16:14:13) [MSC v.1929 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+25/04/18 18:29:31 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Welcome to
+      ____              __
+     / __/__  ___ _____/ /__
+    _\ \/ _ \/ _ `/ __/  '_/
+   /__ / .__/\_,_/_/ /_/\_\   version 3.5.1
+      /_/
+
+Using Python version 3.10.5 (tags/v3.10.5:f377153, Jun  6 2022 16:14:13)
+Spark context Web UI available at http://LAPTOP-5705N2GF:4040
+Spark context available as 'sc' (master = local[*], app id = local-1744981174510).
+SparkSession available as 'spark'.
+>>>
+>>>
+>>> from pyspark.sql import SparkSession
+>>> from pyspark.sql.functions import col
+>>>
+>>> # Start Spark session
+>>>
+>>> spark = SparkSession.builder.appName("BusinessRuleValidation").getOrCreate()
+25/04/18 18:32:10 WARN SparkSession: Using an existing Spark session; only runtime SQL configurations will take effect.
+>>>
+>>>
+>>> # Load orders data from JSON
+>>>
+>>> orders_df = spark.read.option("multiline", "true").json(r"C:\Users\parsh\PycharmProjects\ecom-medallion\data\dq_rules_sample_datasets\05_Business_Rule_Validation\r1_order_status_should_be_one_of_Pending_Shipped_Delivered_Cancelled")
+[Stage 0:>>>>
+>>>
+>>> # Define valid order status
+>>>
+>>> valid_status = ['Pending', 'Shipped', 'Delivered', 'Cancelled']
+>>>
+>>> # Valid orders
+>>>
+>>> valid_orders_df = orders_df.filter((col("order_status").isin(valid_status)) & (col("quantity") > 0))
+>>>
+>>>
+>>> # show results
+>>>
+>>> valid_orders_df.show(truncate=False)
++-----------+-------------------+--------+------------+------+----------+--------+
+|customer_id|order_date         |order_id|order_status|price |product_id|quantity|
++-----------+-------------------+--------+------------+------+----------+--------+
+|CUST1001   |2024-07-01T10:00:00|ORD1001 |Pending     |499.99|PROD1001  |1       |
+|CUST1002   |2024-07-02T11:30:00|ORD1002 |Shipped     |899.0 |PROD1002  |2       |
+|CUST1003   |2024-07-03T09:15:00|ORD1003 |Delivered   |299.0 |PROD1003  |1       |
+|CUST1004   |2024-07-04T14:00:00|ORD1004 |Cancelled   |149.5 |PROD1004  |3       |
+|CUST1007   |2024-07-07T16:45:00|ORD1007 |Delivered   |799.0 |PROD1007  |4       |
++-----------+-------------------+--------+------------+------+----------+--------+
+
+>>>
+>>>
+>>> # Invalid Orders
+>>>
+>>> invalid_orders_df = orders_df.subtract(valid_orders_df)
+>>>
+>>>
+>>> # Show result
+>>>
+>>> invalid_orders_df.show(truncate=False)
++-----------+-------------------+--------+----------------+-----+----------+--------+
+|customer_id|order_date         |order_id|order_status    |price|product_id|quantity|
++-----------+-------------------+--------+----------------+-----+----------+--------+
+|CUST1005   |2024-07-05T12:00:00|ORD1005 |In Progress     |399.0|PROD1005  |1       |
+|CUST1008   |2024-07-08T09:00:00|ORD1008 |Out for Delivery|349.0|PROD1008  |2       |
+|CUST1006   |2024-07-06T10:30:00|ORD1006 |Processing      |599.0|PROD1006  |2       |
++-----------+-------------------+--------+----------------+-----+----------+--------+
+
+>>>
+>>>
+>>>
